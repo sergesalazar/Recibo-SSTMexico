@@ -1,0 +1,2517 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recibo - SST México</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --gold: #EAC900;
+            --dark: #231E2E;
+            --teal: #4D7082;
+            --beige: #D9D9CD;
+            --offwhite: #EDF0E7;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--beige);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 0;
+        }
+
+        .receipt-container {
+            width: 100%;
+            max-width: 210mm;
+            min-height: auto;
+            background: #ffffff;
+            box-shadow: 0 25px 60px rgba(35, 30, 46, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Top accent bar */
+        .top-bar {
+            height: 8px;
+            background: linear-gradient(90deg, var(--gold), var(--dark), var(--teal));
+        }
+
+        /* Gold accent line under top bar */
+        .gold-line {
+            height: 3px;
+            background: var(--gold);
+        }
+
+        /* Corner decorations */
+        .corner-decor {
+            position: absolute;
+            opacity: 0.12;
+        }
+
+        .corner-decor.top-right {
+            top: 30px;
+            right: 30px;
+            width: 80px;
+            height: 80px;
+            border-top: 3px solid var(--dark);
+            border-right: 3px solid var(--dark);
+        }
+
+        .corner-decor.bottom-left {
+            bottom: 30px;
+            left: 30px;
+            width: 80px;
+            height: 80px;
+            border-bottom: 3px solid var(--dark);
+            border-left: 3px solid var(--dark);
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 30px 30px 15px;
+            position: relative;
+        }
+
+        .logo-container {
+            margin-bottom: 12px;
+            display: inline-block;
+            position: relative;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        .logo-container img {
+            width: 75px;
+            height: 75px;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 6px rgba(35, 30, 46, 0.15));
+            transition: all 0.3s ease;
+        }
+
+        .logo-container:hover img {
+            transform: scale(1.05);
+            filter: drop-shadow(0 4px 12px rgba(35, 30, 46, 0.25));
+        }
+
+        .logo-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(35, 30, 46, 0.75);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .logo-container:hover .logo-overlay {
+            opacity: 1;
+        }
+
+        .logo-overlay svg {
+            width: 36px;
+            height: 36px;
+            margin-bottom: 6px;
+        }
+
+        .logo-overlay svg path {
+            fill: white;
+        }
+
+        .logo-overlay-text {
+            font-size: 10px;
+            color: white;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .company-name {
+            font-size: 22.5px;
+            font-weight: 900;
+            color: var(--dark);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            line-height: 1.1;
+        }
+
+        .company-name .accent {
+            color: var(--teal);
+        }
+
+        .company-tagline {
+            font-size: 7px;
+            font-weight: 500;
+            color: var(--teal);
+            letter-spacing: 5px;
+            text-transform: uppercase;
+        }
+
+        /* Gold divider under header */
+        .header-divider {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 0 35px;
+            margin: 6px 0 0;
+        }
+
+        .header-divider .line {
+            flex: 1;
+            height: 1px;
+            background: var(--beige);
+        }
+
+        .header-divider .diamond {
+            width: 6px;
+            height: 6px;
+            background: var(--gold);
+            transform: rotate(45deg);
+            flex-shrink: 0;
+        }
+
+        /* Receipt title */
+        .receipt-title-bar {
+            background: linear-gradient(135deg, var(--dark) 0%, #3a3250 100%);
+            color: white;
+            text-align: center;
+            padding: 5px 30px;
+            margin: 0 35px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .receipt-title-bar         .title-accent {
+            width: 5px;
+            height: 16px;
+            background: var(--gold);
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .receipt-title-bar h2 {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            text-align: center;
+            padding-left: 3px;
+        }
+
+        /* Receipt info */
+        .receipt-info {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 35px 8px;
+            gap: 15px;
+            align-items: flex-end;
+        }
+
+        .receipt-info .info-field {
+            flex: 1;
+            max-width: 50%;
+        }
+
+        .info-label {
+            font-size: 8px;
+            font-weight: 700;
+            color: var(--teal);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 3px;
+        }
+
+        .info-value {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--dark);
+            border-bottom: 2px solid var(--offwhite);
+            padding-bottom: 5px;
+            min-height: 28px;
+            line-height: 1.3;
+        }
+
+        .info-value.mono {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--teal);
+            font-weight: 600;
+        }
+
+        .info-field.highlight .info-value {
+            border-bottom-color: var(--gold);
+        }
+
+        /* Section dividers */
+        .section-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--beige), transparent);
+            margin: 0 35px;
+        }
+
+        .section-divider.gold {
+            height: 1px;
+            background: linear-gradient(90deg, var(--gold), var(--teal), var(--gold));
+            margin: 0 35px;
+        }
+
+        /* Client info section */
+        .client-section {
+            padding: 10px 35px;
+            display: flex;
+            gap: 25px;
+        }
+
+        .client-left, .client-right {
+            flex: 1;
+        }
+
+        .section-title {
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--dark);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid var(--gold);
+            display: inline-block;
+            position: relative;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 30px;
+            height: 2px;
+            background: var(--dark);
+        }
+
+        .client-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .client-row .field-label {
+            width: 90px;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--teal);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            flex-shrink: 0;
+        }
+
+        .client-row .field-line {
+            flex: 1;
+            border-bottom: 1px solid var(--beige);
+            height: 20px;
+            margin-left: 10px;
+            font-size: 11px;
+            color: var(--dark);
+        }
+
+        /* Services section */
+        .services-section {
+            padding: 6px 35px;
+        }
+
+        .services-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+        }
+
+        .services-table thead {
+            background: var(--dark);
+        }
+
+        .services-table thead th {
+            color: var(--gold);
+            font-size: 8px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding: 6px 10px;
+            text-align: left;
+        }
+
+        .services-table thead th:last-child,
+        .services-table thead th:nth-child(3),
+        .services-table thead th:nth-child(4) {
+            text-align: right;
+        }
+
+        .services-table tbody td {
+            padding: 6px 10px;
+            font-size: 12px;
+            color: var(--dark);
+            border-bottom: 1px solid var(--offwhite);
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .services-table tbody td:first-child,
+        .services-table tbody td:nth-child(2) {
+            color: #999999;
+        }
+
+        .services-table tbody td:last-child,
+        .services-table tbody td:nth-child(3),
+        .services-table tbody td:nth-child(4) {
+            text-align: right;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            color: var(--dark);
+            white-space: nowrap;
+            padding: 6px 2px;
+        }
+
+        .services-table tbody tr:nth-child(even) {
+            background: var(--offwhite);
+        }
+
+        .services-table tbody tr:hover {
+            background: #e8ebe0;
+        }
+
+        .services-table .editable-row td {
+            min-height: 30px;
+            color: #999999;
+            font-style: italic;
+        }
+
+        .services-table .editable-row td[contenteditable="true"] {
+            color: var(--dark) !important;
+            font-weight: 500;
+        }
+
+        .services-table .editable-row td:nth-child(2)[contenteditable="true"] {
+            color: #999999 !important;
+        }
+
+        /* Totals */
+        .Totals-section {
+            padding: 8px 35px 12px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .Totals-table {
+            width: auto;
+            max-width: 350px;
+            background: var(--offwhite);
+            border-radius: 8px;
+            padding: 10px 12px;
+        }
+
+        .Totals-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+            border-bottom: 1px solid var(--beige);
+        }
+
+        .Totals-row:last-child {
+            border-bottom: none;
+        }
+
+        .Totals-row .label {
+            font-size: 11px;
+            color: var(--teal);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .Totals-row .value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--dark);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .Totals-row .value::before {
+            content: '$';
+            color: var(--teal);
+        }
+
+        .Totals-row.Total-row {
+            border-bottom: none;
+            border-top: 3px solid var(--dark);
+            margin-top: 8px;
+            padding-top: 10px;
+        }
+
+        .Totals-row.Total-row .label {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--dark);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .Totals-row.Total-row .value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .Totals-row.Total-row .value::before {
+            content: '$';
+            color: var(--gold);
+        }
+
+        /* Payment section */
+        .payment-section {
+            padding: 8px 35px;
+        }
+
+        .payment-right {
+            width: 100%;
+        }
+
+        .notes-box {
+            border: 1px solid var(--beige);
+            border-radius: 6px;
+            padding: 10px;
+            min-height: 30px;
+            background: var(--offwhite);
+        }
+
+        .notes-box p {
+            font-size: 10px;
+            color: var(--teal);
+            line-height: 1.6;
+        }
+
+        .notes-box p.notes-placeholder:empty::before {
+            content: attr(data-placeholder);
+            color: #999999;
+            font-style: italic;
+        }
+
+        .notes-box p.notes-placeholder:focus:empty::before {
+            content: '';
+        }
+
+        /* Signature section */
+        .signature-section {
+            padding: 10px 35px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .signature-box {
+            width: 200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .signature-line {
+            border-bottom: 2px solid var(--dark);
+            min-height: 25px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3px 0;
+        }
+
+        .signature-line img {
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+
+        .signature-label {
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--teal);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .signature-size-control {
+            margin-top: 8px;
+            padding: 10px;
+            background: var(--offwhite);
+            border-radius: 8px;
+        }
+
+        .signature-size-control label {
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--dark);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .signature-size-slider {
+            width: 100%;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 4px;
+            background: var(--beige);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .signature-size-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--dark);
+            cursor: pointer;
+        }
+
+        .signature-size-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--dark);
+            cursor: pointer;
+            border: none;
+        }
+
+        .signature-size-value {
+            font-size: 10px;
+            color: var(--teal);
+            text-align: center;
+            margin-top: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        #signatureInput {
+            display: none;
+        }
+
+        /* Paid badge */
+        .paid-badge {
+            position: absolute;
+            bottom: 80px;
+            left: 50px;
+            width: 100px;
+            height: 100px;
+            border: 4px solid var(--gold);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: rotate(-15deg);
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 10;
+        }
+
+        .paid-badge.visible {
+            opacity: 0.85;
+        }
+
+        .paid-badge span {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--dark);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .paid-badge::before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: -6px;
+            right: -6px;
+            bottom: -6px;
+            border: 2px solid var(--gold);
+            border-radius: 50%;
+            opacity: 0.4;
+        }
+
+        /* Footer */
+        .footer {
+            padding: 10px 35px 8px;
+            text-align: center;
+        }
+
+        .footer-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--beige), var(--gold), var(--beige), transparent);
+            margin-bottom: 20px;
+        }
+
+        .footer-text {
+            font-size: 8px;
+            color: var(--teal);
+            letter-spacing: 1px;
+            line-height: 1.6;
+        }
+
+        .footer-text-above {
+            font-size: 8px;
+            color: var(--teal);
+            letter-spacing: 1px;
+            line-height: 1.6;
+            margin-bottom: 5px;
+        }
+
+        .footer-brand {
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .footer-brand img {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+            opacity: 0.35;
+        }
+
+        .footer-brand span {
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--beige);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        /* Watermark */
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-30deg);
+            font-size: 70px;
+            font-weight: 900;
+            color: var(--offwhite);
+            letter-spacing: 12px;
+            text-transform: uppercase;
+            pointer-events: none;
+            user-select: none;
+            white-space: nowrap;
+            z-index: 0;
+        }
+
+        /* Controls */
+        .controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 18px;
+            border-radius: 14px;
+            box-shadow: 0 10px 40px rgba(35, 30, 46, 0.18);
+            z-index: 1000;
+            width: 230px;
+            border-top: 4px solid var(--gold);
+            max-height: 90vh;
+            overflow-y: auto;
+            cursor: default;
+        }
+
+        .controls h3 {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--teal);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .control-btn {
+            display: block;
+            width: 100%;
+            padding: 10px 14px;
+            margin-bottom: 6px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: 0.5px;
+            text-align: left;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .toggle-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 0 6px;
+            border-radius: 4px;
+            transition: background 0.2s;
+            font-weight: 600;
+            color: var(--teal);
+            line-height: 1;
+        }
+
+        .toggle-btn:hover {
+            background: var(--offwhite);
+        }
+
+        .controls h3 {
+            cursor: grab;
+            user-select: none;
+        }
+
+        .controls h3:active {
+            cursor: grabbing;
+        }
+
+        .drag-handle {
+            font-size: 12px;
+            padding: 0 4px;
+        }
+
+        .controls.hidden .control-btn,
+        .controls.hidden .control-divider,
+        .controls.hidden .logo-upload-hint,
+        .controls.hidden .signature-size-control,
+        .controls.hidden .status-indicator {
+            display: none;
+        }
+
+        .controls.hidden h3 {
+            margin-bottom: 0;
+        }
+
+        .btn-print {
+            background: var(--dark);
+            color: white;
+        }
+
+        .btn-print:hover {
+            background: #3a3250;
+        }
+
+        .btn-pdf {
+            background: linear-gradient(135deg, var(--gold), #d4b500);
+            color: var(--dark);
+        }
+
+        .btn-pdf:hover {
+            background: linear-gradient(135deg, #d4b500, #c0a500);
+        }
+
+        .btn-badge {
+            background: var(--offwhite);
+            color: var(--teal);
+            border: 1px solid var(--beige);
+        }
+
+        .btn-badge:hover {
+            background: #dde2d5;
+        }
+
+        .btn-add-row {
+            background: var(--offwhite);
+            color: var(--dark);
+            border: 1px solid var(--beige);
+        }
+
+        .btn-add-row:hover {
+            background: #dde2d5;
+        }
+
+        .btn-clear {
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+        }
+
+        .btn-clear:hover {
+            background: #fee2e2;
+        }
+
+        .control-divider {
+            height: 1px;
+            background: var(--gold);
+            margin: 12px 0;
+        }
+
+        .logo-upload-hint {
+            text-align: center;
+            padding: 10px;
+            background: var(--offwhite);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px dashed var(--beige);
+        }
+
+        .logo-upload-hint p {
+            font-size: 10px;
+            color: var(--teal);
+            line-height: 1.5;
+        }
+
+        .logo-upload-hint .icon {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        #logoInput {
+            display: none;
+        }
+
+        .logo-size-control {
+            margin-top: 8px;
+            padding: 10px;
+            background: var(--offwhite);
+            border-radius: 8px;
+        }
+
+        .logo-size-control label {
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--dark);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .logo-size-slider {
+            width: 100%;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 4px;
+            background: var(--beige);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .logo-size-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--dark);
+            cursor: pointer;
+        }
+
+        .logo-size-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--dark);
+            cursor: pointer;
+            border: none;
+        }
+
+        .logo-size-value {
+            font-size: 10px;
+            color: var(--teal);
+            text-align: center;
+            margin-top: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            background: #f0fdf4;
+            border-radius: 6px;
+            margin-top: 6px;
+            border: 1px solid #bbf7d0;
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #22c55e;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-text {
+            font-size: 10px;
+            color: #166534;
+            font-weight: 600;
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(35, 30, 46, 0.7);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-box {
+            background: white;
+            padding: 30px 40px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--offwhite);
+            border-top: 4px solid var(--gold);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        /* Custom Alert Modal */
+        .custom-alert-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(35, 30, 46, 0.7);
+            z-index: 2500;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .custom-alert-overlay.active {
+            display: flex;
+        }
+
+        .custom-alert-box {
+            background: white;
+            padding: 30px 40px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .custom-alert-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--teal);
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .custom-alert-message {
+            font-size: 14px;
+            color: var(--dark);
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        .custom-alert-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .custom-alert-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .custom-alert-cancel {
+            background: var(--beige);
+            color: var(--teal);
+        }
+
+        .custom-alert-cancel:hover {
+            background: #d9d9cd;
+        }
+
+        .custom-alert-confirm {
+            background: var(--teal);
+            color: white;
+        }
+
+        .custom-alert-confirm:hover {
+            background: #3a5a6a;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .receipt-container {
+                box-shadow: none;
+                width: 100%;
+                min-height: auto;
+            }
+            .controls, .loading-overlay, .custom-alert-overlay {
+                display: none !important;
+            }
+            .logo-overlay {
+                display: none !important;
+            }
+        }
+
+        [contenteditable="true"] {
+            outline: none;
+            transition: background 0.2s;
+            cursor: text;
+        }
+
+        [contenteditable="true"]:hover {
+            background: var(--offwhite);
+        }
+
+        [contenteditable="true"]:focus {
+            background: #e8ebe0;
+        }
+
+        /* RESPONSIVE STYLES */
+        @media (max-width: 768px) {
+            body {
+                padding: 0;
+            }
+
+            .controls {
+                position: fixed;
+                top: 60px;
+                right: 10px;
+                width: auto;
+                max-width: 90vw;
+                margin-bottom: 0;
+                max-height: 80vh;
+                left: auto;
+            }
+
+            .controls.hidden {
+                width: auto;
+                height: auto;
+                padding: 10px;
+            }
+
+            /* Mantener drag-handle visible para indicar zona de arrastre */
+
+            .receipt-container {
+                max-width: 100%;
+                min-height: auto;
+                padding-bottom: 20px;
+            }
+
+            .header {
+                padding: 30px 20px 15px;
+            }
+
+            .logo-container img {
+                width: 80px;
+                height: 80px;
+            }
+
+            .company-name {
+                font-size: 15px;
+                letter-spacing: 2px;
+            }
+
+            .company-tagline {
+                font-size: 6px;
+                letter-spacing: 3px;
+            }
+
+            .receipt-info {
+                flex-direction: column;
+                padding: 12px 20px 8px;
+                gap: 10px;
+            }
+
+            .receipt-info .info-field {
+                flex: 1;
+            }
+
+            .info-label {
+                font-size: 7px;
+            }
+
+            .info-value {
+                font-size: 11px;
+                min-height: 26px;
+            }
+
+            .client-section {
+                padding: 15px 20px;
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .section-title {
+                font-size: 9px;
+                margin-bottom: 8px;
+                padding-bottom: 4px;
+            }
+
+            .client-row {
+                margin-bottom: 6px;
+            }
+
+            .client-row .field-label {
+                width: 70px;
+                font-size: 9px;
+            }
+
+            .services-table {
+                font-size: 12px;
+            }
+
+            .services-table thead th {
+                padding: 8px 6px;
+                font-size: 8px;
+            }
+
+            .services-table tbody td {
+                padding: 6px 4px;
+                font-size: 10px;
+            }
+
+            .services-table tbody td:last-child,
+            .services-table tbody td:nth-child(3),
+            .services-table tbody td:nth-child(4) {
+                font-size: 11px;
+            }
+
+            .services-section {
+                padding: 12px 20px;
+            }
+
+            .Totals-section {
+                padding: 15px 20px;
+                justify-content: center;
+            }
+
+            .Totals-table {
+                width: 100%;
+                max-width: 250px;
+            }
+
+            .Totals-row .label {
+                font-size: 10px;
+            }
+
+            .Totals-row .value {
+                font-size: 13px;
+            }
+
+            .Totals-row.Total-row .label {
+                font-size: 14px;
+            }
+
+            .Totals-row.Total-row .value {
+                font-size: 18px;
+            }
+
+            .payment-section {
+                padding: 15px 20px;
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .payment-row {
+                margin-bottom: 8px;
+            }
+
+            .payment-row .field-label {
+                width: 100px;
+                font-size: 9px;
+            }
+
+            .notes-box {
+                padding: 12px;
+                min-height: 60px;
+            }
+
+            .notes-box p {
+                font-size: 10px;
+            }
+
+            .signature-section {
+                padding: 15px;
+                align-items: center;
+            }
+
+            .signature-line {
+                min-height: 30px;
+                margin-bottom: 6px;
+            }
+
+            .signature-label {
+                font-size: 8px;
+            }
+
+            .corner-decor {
+                width: 50px;
+                height: 50px;
+            }
+
+            .paid-badge {
+                width: 80px;
+                height: 80px;
+                bottom: 60px;
+                left: 35px;
+                right: auto;
+                top: auto;
+            }
+
+            .paid-badge span {
+                font-size: 12px;
+            }
+
+            .footer {
+                padding: 20px;
+            }
+
+            .footer-text {
+                font-size: 8px;
+            }
+
+            .watermark {
+                font-size: 50px;
+                letter-spacing: 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 0;
+            }
+
+            .controls {
+                position: fixed;
+                top: 55px;
+                right: 5px;
+                width: auto;
+                max-width: 95vw;
+                left: auto;
+            }
+
+            .header {
+                padding: 20px 15px 10px;
+            }
+
+            .logo-container img {
+                width: 60px;
+                height: 60px;
+            }
+
+            .company-name {
+                font-size: 11px;
+                letter-spacing: 1px;
+                margin-bottom: 2px;
+            }
+
+            .company-tagline {
+                font-size: 5px;
+                letter-spacing: 2px;
+            }
+
+            .receipt-info {
+                padding: 12px 15px 8px;
+            }
+
+            .info-label {
+                font-size: 7px;
+                margin-bottom: 4px;
+            }
+
+            .info-value {
+                font-size: 11px;
+                min-height: 25px;
+                padding-bottom: 5px;
+            }
+
+            .header-divider {
+                padding: 0 25px;
+                margin: 10px 0 0;
+                gap: 8px;
+            }
+
+            .header-divider .diamond {
+                width: 6px;
+                height: 6px;
+            }
+
+            .section-divider {
+                margin: 0 25px;
+            }
+
+            .client-section {
+                padding: 10px 15px;
+                gap: 12px;
+            }
+
+            .client-row {
+                margin-bottom: 5px;
+            }
+
+            .client-row .field-label {
+                width: 60px;
+                font-size: 8px;
+            }
+
+            .section-title {
+                font-size: 8px;
+                margin-bottom: 6px;
+                padding-bottom: 3px;
+            }
+
+            .services-section {
+                padding: 8px 15px;
+            }
+
+            .services-table {
+                margin-top: 3px;
+            }
+
+            .services-table thead th {
+                padding: 8px 6px;
+                font-size: 7px;
+            }
+
+            .services-table thead th:nth-child(2) {
+                font-size: 7px;
+                max-width: 80px;
+            }
+
+            .services-table tbody td {
+                padding: 8px 6px;
+                font-size: 10px;
+            }
+
+            .Totals-section {
+                padding: 12px 15px;
+            }
+
+            .Totals-table {
+                padding: 15px;
+            }
+
+            .Totals-row {
+                padding: 6px 0;
+            }
+
+            .Totals-row .label {
+                font-size: 9px;
+            }
+
+            .Totals-row .value {
+                font-size: 12px;
+            }
+
+            .Totals-row.Total-row {
+                margin-top: 8px;
+                padding-top: 10px;
+            }
+
+            .Totals-row.Total-row .label {
+                font-size: 12px;
+                letter-spacing: 1px;
+            }
+
+            .Totals-row.Total-row .value {
+                font-size: 16px;
+            }
+
+            .payment-section {
+                padding: 12px 15px;
+                gap: 15px;
+            }
+
+            .payment-row {
+                margin-bottom: 6px;
+            }
+
+            .payment-row .field-label {
+                width: 80px;
+                font-size: 8px;
+            }
+
+            .notes-box {
+                padding: 10px;
+                min-height: 50px;
+            }
+
+            .notes-box p {
+                font-size: 9px;
+                line-height: 1.5;
+            }
+
+            .signature-section {
+                padding: 12px 15px;
+                align-items: center;
+            }
+
+            .signature-box {
+                width: 150px;
+            }
+
+            .signature-line {
+                min-height: 25px;
+                margin-bottom: 6px;
+            }
+
+            .signature-label {
+                font-size: 7px;
+            }
+
+            .controls {
+                position: fixed;
+                top: 55px;
+                right: 5px;
+                width: auto;
+                max-width: 95vw;
+                left: auto;
+            }
+
+            .header {
+                padding: 20px 15px 10px;
+            }
+
+            .logo-container img {
+                width: 60px;
+                height: 60px;
+            }
+
+            .company-name {
+                font-size: 11px;
+                letter-spacing: 1px;
+                margin-bottom: 2px;
+            }
+
+            .company-tagline {
+                font-size: 5px;
+                letter-spacing: 2px;
+            }
+
+            .receipt-title-bar {
+                padding: 6px 15px;
+                margin: 0 15px;
+            }
+
+            .receipt-title-bar h2 {
+                font-size: 14px;
+                letter-spacing: 4px;
+            }
+
+            .receipt-info {
+                padding: 8px 12px 5px;
+                gap: 6px;
+            }
+
+            .info-label {
+                font-size: 6px;
+                margin-bottom: 2px;
+            }
+
+            .info-value {
+                font-size: 10px;
+                min-height: 20px;
+                padding-bottom: 3px;
+            }
+
+            .header-divider {
+                padding: 0 20px;
+                margin: 4px 0 0;
+                gap: 5px;
+            }
+
+            .header-divider .diamond {
+                width: 5px;
+                height: 5px;
+            }
+
+            .section-divider {
+                margin: 0 20px;
+            }
+
+            .client-section {
+                padding: 6px 12px;
+                gap: 8px;
+            }
+
+            .client-row {
+                margin-bottom: 4px;
+            }
+
+            .client-row .field-label {
+                width: 60px;
+                font-size: 8px;
+            }
+
+            .section-title {
+                font-size: 8px;
+                margin-bottom: 5px;
+                padding-bottom: 2px;
+            }
+
+            .services-section {
+                padding: 6px 12px;
+            }
+
+            .services-table {
+                margin-top: 3px;
+            }
+
+            .services-table thead th {
+                padding: 8px 6px;
+                font-size: 7px;
+            }
+
+            .services-table thead th:nth-child(2) {
+                font-size: 7px;
+                max-width: 80px;
+            }
+
+            .services-table tbody td {
+                padding: 8px 6px;
+                font-size: 10px;
+            }
+
+            .Totals-section {
+                padding: 12px 15px;
+            }
+
+            .Totals-table {
+                padding: 15px;
+            }
+
+            .Totals-row {
+                padding: 6px 0;
+            }
+
+            .Totals-row .label {
+                font-size: 9px;
+            }
+
+            .Totals-row .value {
+                font-size: 12px;
+            }
+
+            .Totals-row.Total-row {
+                margin-top: 8px;
+                padding-top: 10px;
+            }
+
+            .Totals-row.Total-row .label {
+                font-size: 12px;
+                letter-spacing: 1px;
+            }
+
+            .Totals-row.Total-row .value {
+                font-size: 16px;
+            }
+
+            .payment-section {
+                padding: 12px 15px;
+                gap: 15px;
+            }
+
+            .payment-row {
+                margin-bottom: 6px;
+            }
+
+            .payment-row .field-label {
+                width: 80px;
+                font-size: 8px;
+            }
+
+            .notes-box {
+                padding: 10px;
+                min-height: 50px;
+            }
+
+            .notes-box p {
+                font-size: 9px;
+                line-height: 1.5;
+            }
+
+            .signature-section {
+                padding: 15px 15px;
+                align-items: center;
+            }
+
+            .signature-box {
+                width: 150px;
+            }
+
+            .signature-line {
+                min-height: 30px;
+                margin-bottom: 6px;
+            }
+
+            .signature-label {
+                font-size: 7px;
+            }
+
+            .corner-decor {
+                display: none;
+            }
+
+            .paid-badge {
+                width: 70px;
+                height: 70px;
+                bottom: 50px;
+                left: 25px;
+                right: auto;
+                top: auto;
+            }
+
+            .paid-badge span {
+                font-size: 10px;
+                letter-spacing: 1px;
+            }
+
+            .footer {
+                padding: 15px 15px 12px;
+            }
+
+            .footer-divider {
+                margin-bottom: 15px;
+            }
+
+            .footer-text {
+                font-size: 7px;
+                line-height: 1.6;
+            }
+
+            .footer-brand {
+                margin-top: 8px;
+                gap: 6px;
+            }
+
+            .footer-brand img {
+                width: 18px;
+                height: 18px;
+            }
+
+            .footer-brand span {
+                font-size: 8px;
+                letter-spacing: 2px;
+            }
+
+            .watermark {
+                font-size: 35px;
+                letter-spacing: 6px;
+                opacity: 0.08;
+            }
+
+            .control-btn {
+                padding: 8px 12px;
+                font-size: 10px;
+                margin-bottom: 5px;
+            }
+
+            .control-divider {
+                margin: 10px 0;
+            }
+
+            .logo-upload-hint {
+                padding: 8px;
+                margin-bottom: 8px;
+            }
+
+            .logo-upload-hint p {
+                font-size: 9px;
+            }
+
+            .logo-upload-hint .icon {
+                font-size: 16px;
+                margin-bottom: 3px;
+            }
+
+            .logo-size-control {
+                margin-top: 6px;
+                padding: 8px;
+            }
+
+            .logo-size-control label {
+                font-size: 8px;
+                margin-bottom: 4px;
+            }
+
+            .logo-size-value {
+                font-size: 9px;
+                margin-top: 3px;
+            }
+
+            .status-indicator {
+                padding: 6px 8px;
+                margin-top: 5px;
+                gap: 6px;
+            }
+
+            .status-dot {
+                width: 6px;
+                height: 6px;
+            }
+
+            .status-text {
+                font-size: 9px;
+            }
+
+            .controls h3 {
+                font-size: 10px;
+                letter-spacing: 1px;
+            }
+        }
+    
+    </style>
+</head>
+<body>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-box">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Generando PDF...</div>
+        </div>
+    </div>
+
+    <!-- Custom Alert Modal -->
+    <div class="custom-alert-overlay" id="customAlertOverlay">
+        <div class="custom-alert-box">
+            <div class="custom-alert-title">¡Atención!</div>
+            <div class="custom-alert-message" id="customAlertMessage">¿Has revisado que el folio esté actualizado antes de generar el PDF?</div>
+            <div class="custom-alert-buttons">
+                <button class="custom-alert-btn custom-alert-cancel" onclick="hideCustomAlert()">Cancelar</button>
+                <button class="custom-alert-btn custom-alert-confirm" onclick="confirmGeneratePDF()">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Control Panel -->
+    <div class="controls" id="controlsPanel">
+        <h3>
+            <button id="toggleControls" class="toggle-btn" title="Ocultar/Mostrar Panel">-</button>
+            Panel de Control
+            <span id="dragHandle" class="drag-handle" title="Activar/Desactivar Arrastrar Panel" onclick="toggleDrag()">⋮⋮</span>
+        </h3>
+
+        <button class="control-btn btn-pdf" onclick="generatePDF()">📄 Generar PDF</button>
+        <button class="control-btn btn-badge" onclick="toggleBadge()">🏷️ Sello PAGADO</button>
+        <button class="control-btn btn-add-row" onclick="addRow()">➕ Agregar Fila</button>
+        <button class="control-btn btn-remove-row" onclick="removeRow()" style="background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca;">➖ Quitar Fila</button>
+        <div class="control-divider"></div>
+        <button class="control-btn btn-logo" style="background: var(--teal); color: white;" onclick="document.getElementById('logoInput').click()">🖼️ Cargar Logo</button>
+        <button class="control-btn btn-signature" style="background: #231E2E; color: white;" onclick="document.getElementById('signatureInput').click()">✍️ Cargar Firma</button>
+        <input type="file" id="signatureInput" accept="image/*" onchange="loadSignature(event)">
+        <div class="signature-size-control" id="signatureSizeControl" style="display: none;">
+            <label>Tamaño de la Firma</label>
+            <input type="range" class="signature-size-slider" id="signatureSizeSlider" min="60" max="200" value="120" oninput="changeSignatureSize(this.value)">
+            <div class="signature-size-value" id="signatureSizeValue">120px</div>
+        </div>
+        <input type="file" id="logoInput" accept="image/*" onchange="changeLogo(event)">
+        <div class="control-divider"></div>
+        <button class="control-btn btn-clear" onclick="clearFields()">🧹 Limpiar Campos</button>
+        <button class="control-btn btn-reset" onclick="nuevoFolio()" style="background: #fef3c7; color: #92400e; border: 1px solid #fcd34d;">🔄 Nuevo Folio</button>
+
+    </div>
+
+    <!-- Receipt -->
+    <div class="receipt-container" id="receipt">
+        <div class="top-bar"></div>
+        <div class="gold-line"></div>
+        <div class="corner-decor top-right"></div>
+        <div class="corner-decor bottom-left"></div>
+
+        <div class="paid-badge" id="paidBadge">
+            <span>PAGADO</span>
+        </div>
+
+        <!-- Header -->
+        <div class="header">
+            <div class="logo-container" onclick="document.getElementById('logoInput').click()" title="Haz clic para cambiar el logo">
+                 <img id="logoImg" src="logo.png" alt="Logo SST México">
+                <div class="logo-overlay">
+                    <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                    <span class="logo-overlay-text">Cambiar Logo</span>
+                </div>
+            </div>
+            <div class="company-name">SST <span class="accent">México</span></div>
+            <div class="company-tagline" contenteditable="true">Desarrollo de Tecnologías</div>
+        </div>
+
+        <div class="header-divider">
+            <div class="line"></div>
+            <div class="diamond"></div>
+            <div class="line"></div>
+        </div>
+
+        <!-- Receipt Title -->
+        <div class="receipt-title-bar">
+            <div class="title-accent"></div>
+            <h2>RECIBO</h2>
+            <div class="title-accent"></div>
+        </div>
+
+        <!-- Receipt Info -->
+        <div class="receipt-info">
+            <div class="info-field">
+                <div class="info-label">Fecha de Emisión</div>
+                <div class="info-value" id="emissionDate" contenteditable="true">15 de Abril, 2026</div>
+            </div>
+            <div class="info-field highlight" style="text-align: right;">
+                <div class="info-label">No. de Recibo</div>
+                <div class="info-value mono" id="receiptNumber" contenteditable="true">SST-MX-2026-0001</div>
+            </div>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- Client Information -->
+        <div class="client-section">
+            <div class="client-left">
+                <div class="section-title">Información del Cliente</div>
+                <div class="client-row">
+                    <span class="field-label">Nombre</span>
+                    <div class="field-line" contenteditable="true"></div>
+                </div>
+                <div class="client-row">
+                    <span class="field-label">Empresa</span>
+                    <div class="field-line" contenteditable="true"></div>
+                </div>
+                <div class="client-row">
+                    <span class="field-label">Dirección</span>
+                    <div class="field-line" contenteditable="true"></div>
+                </div>
+                <div class="client-row">
+                    <span class="field-label">Teléfono</span>
+                    <div class="field-line" contenteditable="true"></div>
+                </div>
+            </div>
+            <div class="client-right">
+                <div class="section-title">Información del Proyecto</div>
+                <div class="client-row">
+                    <span class="field-label">Proyecto</span>
+                    <div class="field-line" contenteditable="true"></div>
+                </div>
+                <div class="client-row">
+                    <span class="field-label">Concepto</span>
+                    <div class="field-line" contenteditable="true"></div>
+                </div>
+                <div class="client-row">
+                    <span class="field-label">Forma de pago</span>
+                    <div class="field-line" contenteditable="true"></div>
+                </div>
+                <div class="client-row">
+                    <span class="field-label">Moneda</span>
+                    <div class="field-line" contenteditable="true">MXN - Peso Mexicano</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-divider gold"></div>
+
+        <!-- Services Table -->
+        <div class="services-section">
+            <div class="section-title">Descripción de Servicios</div>
+            <table class="services-table" id="servicesTable">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">#</th>
+                        <th>Descripción del Servicio</th>
+                        <th style="width: 70px;">Cant.</th>
+                        <th style="width: 115px;">P. Unit.</th>
+                        <th style="width: 140px;">Importe</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr class="editable-row">
+                        <td>1</td>
+                        <td contenteditable="true"></td>
+                        <td contenteditable="true"></td>
+                        <td contenteditable="true"></td>
+                        <td contenteditable="true"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Totals -->
+        <div class="Totals-section">
+            <div class="Totals-table">
+                <div class="Totals-row">
+                    <span class="label">SubTotal</span>
+                    <span class="value" id="SubTotal">0.00</span>
+                </div>
+                <div class="Totals-row">
+                    <span class="label">IVA (16%)</span>
+                    <span class="value" id="tax">0.00</span>
+                </div>
+                <div class="Totals-row Total-row">
+                    <span class="label">Total</span>
+                    <span class="value" id="Total">0.00</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- Payment Details -->
+        <div class="payment-section">
+            <div class="payment-right">
+                <div class="section-title">Observaciones</div>
+                <div class="notes-box">
+                     <p contenteditable="true" class="notes-placeholder" data-placeholder="Escriba aquí notas adicionales..."></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Signature Section -->
+        <div class="signature-section">
+            <div class="signature-box">
+                <div class="signature-line" id="sellerSignatureLine"></div>
+                <div class="signature-label">Firma del Emisor</div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-text-above">
+                Este documento confirma la recepción del pago descrito y no sustituye un comprobante fiscal (CFDI)
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let rowCounter = 1;
+        let dragEnabled = true;
+
+        function changeLogo(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const logoDataUrl = e.target.result;
+                    document.getElementById('logoImg').src = logoDataUrl;
+
+                    // Guardar el logo en localStorage para que persista
+                    localStorage.setItem('savedLogo', logoDataUrl);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Restaurar el logo guardado al cargar la página
+        function restoreSavedLogo() {
+            const savedLogo = localStorage.getItem('savedLogo');
+            if (savedLogo) {
+                document.getElementById('logoImg').src = savedLogo;
+            }
+        }
+
+        // Llamar a la función al cargar la página
+        window.addEventListener('load', function() {
+            restoreSavedLogo();
+        });
+
+
+
+        function toggleBadge() {
+            const badge = document.getElementById('paidBadge');
+            badge.classList.toggle('visible');
+        }
+
+        function updateRowNumbers() {
+            const rows = document.querySelectorAll('#tableBody tr');
+            rows.forEach((row, index) => {
+                row.cells[0].textContent = index + 1;
+            });
+            rowCounter = rows.length;
+        }
+
+        function toggleDrag() {
+            dragEnabled = !dragEnabled;
+            updateDragUI();
+        }
+
+        function updateDragUI() {
+            const handle = document.getElementById('dragHandle');
+            handle.style.color = dragEnabled ? 'var(--gold)' : 'var(--teal)';
+            handle.style.cursor = dragEnabled ? 'grab' : 'default';
+            controls.style.cursor = dragEnabled ? 'grab' : 'default';
+        }
+
+        function addRow() {
+            const tbody = document.getElementById('tableBody');
+            const newRow = document.createElement('tr');
+            newRow.className = 'editable-row';
+            newRow.innerHTML = `
+                <td></td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true"></td>
+            `;
+            tbody.appendChild(newRow);
+            updateRowNumbers();
+        }
+
+        function removeRow() {
+            const tbody = document.getElementById('tableBody');
+            const rows = tbody.querySelectorAll('tr');
+
+            if (rows.length > 1) {
+                rows[rows.length - 1].remove();
+                updateRowNumbers();
+            } else {
+                alert('No se puede eliminar, debe haber al menos una fila.');
+            }
+        }
+
+        function loadSignature(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const signatureLine = document.getElementById('sellerSignatureLine');
+                    signatureLine.innerHTML = '';
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.id = 'sellerSignatureImg';
+                    img.style.width = '120px';
+                    img.style.height = 'auto';
+                    signatureLine.appendChild(img);
+                    
+                    // Mostrar el control de tamaño
+                    document.getElementById('signatureSizeControl').style.display = 'block';
+                    document.getElementById('signatureSizeSlider').value = 120;
+                    document.getElementById('signatureSizeValue').textContent = '120px';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function changeSignatureSize(size) {
+            const signatureImg = document.getElementById('sellerSignatureImg');
+            if (signatureImg) {
+                signatureImg.style.width = size + 'px';
+                signatureImg.style.height = 'auto';
+                document.getElementById('signatureSizeValue').textContent = size + 'px';
+            }
+        }
+
+        // Call restoreSavedLogo on load
+        window.addEventListener('load', restoreSavedLogo);
+
+        // Toggle controls visibility
+        function toggleControls() {
+            const controls = document.getElementById('controlsPanel');
+            controls.classList.toggle('hidden');
+            const toggleBtn = document.getElementById('toggleControls');
+            toggleBtn.textContent = controls.classList.contains('hidden') ? '+' : '-';
+        }
+
+        document.getElementById('toggleControls').addEventListener('click', toggleControls);
+
+        // Make controls draggable
+        let isDragging = false;
+        let dragStartX, dragStartY, startLeft, startTop;
+        let touchStartX, touchStartY;
+        let dragThreshold = 5; // pixels to move before starting drag
+
+        const controls = document.getElementById('controlsPanel');
+
+        controls.addEventListener('mousedown', startDrag);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', stopDrag);
+
+        // Touch events for mobile
+        controls.addEventListener('touchstart', startDragTouch);
+        document.addEventListener('touchmove', dragTouch);
+        document.addEventListener('touchend', stopDrag);
+
+        function startDrag(e) {
+            // Evitar iniciar drag si se hace click en botones, inputs o si drag está deshabilitado
+            if (e.target.closest('button') || e.target.closest('input') || !dragEnabled) return;
+            isDragging = true;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            const rect = controls.getBoundingClientRect();
+            startLeft = rect.left;
+            startTop = rect.top;
+            controls.style.position = 'absolute'; // Asegurar posición absoluta para movimiento libre
+            controls.style.cursor = 'grabbing';
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+            const dx = e.clientX - dragStartX;
+            const dy = e.clientY - dragStartY;
+            controls.style.left = (startLeft + dx) + 'px';
+            controls.style.top = (startTop + dy) + 'px';
+            controls.style.right = 'auto';
+            controls.style.bottom = 'auto';
+        }
+
+        function stopDrag() {
+            isDragging = false;
+            touchStartX = null;
+            touchStartY = null;
+            startLeft = null;
+            startTop = null;
+            controls.style.cursor = dragEnabled ? 'grab' : 'default';
+        }
+
+        // Function to reset controls position
+        function resetControlsPosition() {
+            controls.style.top = '20px';
+            controls.style.left = 'auto';
+            controls.style.right = '20px';
+            controls.style.bottom = 'auto';
+        }
+
+        // Optional: add a button to reset position, but for now, manual
+
+        function startDragTouch(e) {
+            if (!dragEnabled) return;
+            const touch = e.touches[0];
+            const target = e.target;
+            if (target.closest('button') || target.closest('input') || target.closest('label')) return;
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+            isDragging = true;
+            const rect = controls.getBoundingClientRect();
+            startLeft = rect.left;
+            startTop = rect.top;
+            controls.style.position = 'absolute';
+            controls.style.cursor = 'grabbing';
+        }
+
+        function dragTouch(e) {
+            if (!isDragging) return;
+            const touch = e.touches[0];
+            const dx = touch.clientX - touchStartX;
+            const dy = touch.clientY - touchStartY;
+            controls.style.left = (startLeft + dx) + 'px';
+            controls.style.top = (startTop + dy) + 'px';
+            controls.style.right = 'auto';
+            controls.style.bottom = 'auto';
+            e.preventDefault();
+        }
+
+        function clearFields() {
+            showCustomAlert('¿Estás seguro de que deseas limpiar todos los campos?', confirmClearFields);
+        }
+
+        function confirmClearFields() {
+            const editables = document.querySelectorAll('[contenteditable="true"]');
+            editables.forEach(el => {
+                // Excluir el número de recibo y la fecha de emisión
+                if (el.id !== 'receiptNumber' && el.id !== 'emissionDate') {
+                    el.textContent = '';
+                }
+            });
+            document.querySelector('.notes-box p').textContent = '';
+            document.querySelector('.notes-box p').classList.add('notes-placeholder');
+            const clientRows = document.querySelectorAll('.client-row .field-line');
+            const lastClientRow = clientRows[clientRows.length - 1];
+            if (lastClientRow) {
+                lastClientRow.textContent = 'MXN - Peso Mexicano';
+            }
+        }
+
+        document.getElementById('tableBody').addEventListener('input', function(e) {
+            const rows = this.querySelectorAll('tr');
+            let SubTotal = 0;
+
+            rows.forEach((row, index) => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 5) {
+                    const qty = parseFloat(cells[2].textContent.replace(/,/g, '').replace('$', '')) || 0;
+                    const price = parseFloat(cells[3].textContent.replace(/,/g, '').replace('$', '').replace(/<[^>]*>/g, '')) || 0;
+                    const amount = qty * price;
+                    if (amount > 0) {
+                        cells[4].innerHTML = '<span style="color: var(--teal); font-weight: 600;">$</span> ' + amount.toLocaleString('en-US', { minimumFractionDigits: 2 });
+                    }
+                    SubTotal += amount;
+                }
+            });
+
+            const tax = SubTotal * 0.16;
+            const Total = SubTotal + tax;
+
+            document.getElementById('SubTotal').textContent = SubTotal.toLocaleString('en-US', { minimumFractionDigits: 2 });
+            document.getElementById('tax').textContent = tax.toLocaleString('en-US', { minimumFractionDigits: 2 });
+            document.getElementById('Total').textContent = Total.toLocaleString('en-US', { minimumFractionDigits: 2 });
+        });
+
+        // Formatear P. Unit. cuando se termina de editar
+        document.getElementById('tableBody').addEventListener('blur', function(e) {
+            if (e.target && e.target.cellIndex === 3) {
+                const price = parseFloat(e.target.textContent.replace(/,/g, '').replace('$', '').replace(/<[^>]*>/g, '')) || 0;
+                if (price > 0) {
+                    e.target.innerHTML = '<span style="color: var(--teal); font-weight: 600;">$</span> ' + price.toLocaleString('en-US', { minimumFractionDigits: 2 });
+                }
+            }
+        }, true);
+
+        // Generar folio basado en fecha y hora: SSTM-DDMMYY-HHMMSS
+        function generarFolioSSTM() {
+            const now = new Date();
+            const dd = String(now.getDate()).padStart(2, '0');
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const yy = String(now.getFullYear()).slice(-2);
+            const hh = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            const ss = String(now.getSeconds()).padStart(2, '0');
+            return `SSTM-${dd}${mm}${yy}-${hh}${min}${ss}`;
+        }
+
+        // Obtener folio actual del localStorage, o generar uno nuevo si no existe
+        function obtenerFolio() {
+            const stored = localStorage.getItem('folio_actual');
+            if (stored) {
+                return stored;
+            } else {
+                const newFolio = generarFolioSSTM();
+                localStorage.setItem('folio_actual', newFolio);
+                return newFolio;
+            }
+        }
+
+        // Generar un nuevo folio y actualizar en pantalla
+        function nuevoFolio() {
+            const newFolio = generarFolioSSTM();
+            localStorage.setItem('folio_actual', newFolio);
+            document.getElementById('receiptNumber').textContent = newFolio;
+        }
+
+        // Llamar la función al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            restoreSavedLogo();
+            const newFolio = generarFolioSSTM();
+            document.getElementById('receiptNumber').textContent = newFolio;
+            updateDragUI();
+        });
+        
+        // Establecer fecha de Emisión automática
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date();
+            const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+            const emissionDateElement = document.getElementById('emissionDate');
+            if (emissionDateElement) {
+                emissionDateElement.textContent = today.toLocaleDateString('es-ES', dateOptions);
+            }
+        });
+
+        // PDF Generation
+        async function generatePDF() {
+            showCustomAlert('¿Has revisado que el folio esté actualizado antes de generar el PDF?', null);
+        }
+
+        async function generatePDFActual() {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.add('active');
+
+            const controls = document.querySelector('.controls');
+            const logoOverlay = document.querySelector('.logo-overlay');
+            const savedOverlayStyle = logoOverlay.style.display;
+            logoOverlay.style.display = 'none';
+
+            try {
+                const receipt = document.getElementById('receipt');
+                const originalWidth = receipt.style.width;
+                const originalMaxWidth = receipt.style.maxWidth;
+                receipt.style.width = '210mm';
+                receipt.style.maxWidth = 'none';
+
+                const canvas = await html2canvas(receipt, {
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff',
+                    logging: false
+                });
+
+                receipt.style.width = originalWidth;
+                receipt.style.maxWidth = originalMaxWidth;
+
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+
+                const imgWidth = canvas.width;
+                const imgHeight = canvas.height;
+
+                const ratio = pdfWidth / imgWidth;
+                const scaledWidth = pdfWidth;
+                const scaledHeight = imgHeight * ratio;
+
+                // ✅ CORRECCIÓN 1: Cálculo correcto de altura útil
+                const bottomMargin = 10;
+                const usableHeightPx = (imgHeight * pdfHeight) / scaledHeight - bottomMargin;
+                
+                // ✅ CORRECCIÓN 2: Margen de seguridad de 15px para evitar falsos saltos
+                const safetyMargin = 15;
+
+                let pageNumber = 1;
+                let currentSliceY = 0;
+
+                while (currentSliceY < imgHeight - safetyMargin) {
+                    const remainingHeight = imgHeight - currentSliceY;
+                    const sliceHeight = Math.min(remainingHeight, usableHeightPx);
+
+                    const sliceCanvas = document.createElement('canvas');
+                    sliceCanvas.width = imgWidth;
+                    sliceCanvas.height = sliceHeight;
+                    const sliceCtx = sliceCanvas.getContext('2d');
+                    sliceCtx.drawImage(canvas, 0, currentSliceY, imgWidth, sliceHeight, 0, 0, imgWidth, sliceHeight);
+
+                    const sliceScaledHeight = (sliceHeight / imgHeight) * scaledHeight;
+
+                    pdf.addImage(
+                        sliceCanvas.toDataURL('image/jpeg', 0.9),
+                        'JPEG',
+                        0,
+                        0,
+                        scaledWidth,
+                        sliceScaledHeight
+                    );
+
+                    // ✅ CORRECCIÓN 3: Solo mostrar número de página si hay mas de una
+                    if (scaledHeight > pdfHeight) {
+                        pdf.setFontSize(7);
+                        pdf.setTextColor(77, 112, 130);
+                        pdf.text(String(pageNumber), pdfWidth - 10, pdfHeight - 5, { align: 'right' });
+                    }
+
+                    pageNumber++;
+                    currentSliceY += sliceHeight;
+
+                    // ✅ CORRECCIÓN 4: No agregar página vacía, y usar margen de seguridad
+                    if (currentSliceY + safetyMargin < imgHeight) {
+                        pdf.addPage();
+                    }
+                }
+
+                const numeroRecibo = document.getElementById('receiptNumber').textContent.trim();
+                const EmpresaLabel = Array.from(document.querySelectorAll('.field-label')).find(label => label.textContent.trim() === 'Empresa');
+                const EmpresaValue = EmpresaLabel ? EmpresaLabel.nextElementSibling.textContent.trim() : '';
+                const fileName = `Recibo_${EmpresaValue}_${numeroRecibo}.pdf`.replace(/[^a-zA-Z0-9\-_\.]/g, '_');
+
+                pdf.save(fileName);
+            } catch (error) {
+                console.error('Error generating PDF:', error);
+                alert('Error al generar el PDF. Por favor intente de nuevo.');
+            } finally {
+                logoOverlay.style.display = savedOverlayStyle;
+                overlay.classList.remove('active');
+            }
+        }
+
+        let currentConfirmCallback = null;
+
+        function showCustomAlert(message, callback) {
+            document.getElementById('customAlertMessage').textContent = message;
+            currentConfirmCallback = callback;
+            document.getElementById('customAlertOverlay').classList.add('active');
+        }
+
+        function hideCustomAlert() {
+            document.getElementById('customAlertOverlay').classList.remove('active');
+        }
+
+        async function confirmGeneratePDF() {
+            hideCustomAlert();
+            if (currentConfirmCallback) {
+                await currentConfirmCallback();
+            } else {
+                await generatePDFActual();
+            }
+        }
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
