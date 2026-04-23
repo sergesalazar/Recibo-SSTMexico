@@ -43,6 +43,27 @@
             overflow: hidden;
         }
 
+        .page-break-guide {
+            position: absolute;
+            left: 24px;
+            right: 24px;
+            height: 0;
+            border-top: 2px dotted rgba(77, 112, 130, 0.42);
+            pointer-events: none;
+            z-index: 20;
+            display: none;
+        }
+
+        .page-break-guide::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: -5px;
+            height: 10px;
+            background: linear-gradient(90deg, rgba(234, 201, 0, 0.10), rgba(77, 112, 130, 0.08), rgba(234, 201, 0, 0.10));
+        }
+
         /* Top accent bar */
         .top-bar {
             height: 8px;
@@ -1125,6 +1146,9 @@
             .logo-overlay {
                 display: none !important;
             }
+            .page-break-guide {
+                display: none !important;
+            }
         }
 
         [contenteditable="true"] {
@@ -2051,6 +2075,7 @@
                 Este documento confirma la recepción del pago descrito y no sustituye un comprobante fiscal (CFDI)
             </div>
         </div>
+        <div class="page-break-guide" id="pageBreakGuide" aria-hidden="true"></div>
     </div>
 
     <script>
@@ -2112,6 +2137,24 @@
             controls.style.cursor = dragEnabled ? 'grab' : 'default';
         }
 
+        function updatePageBreakGuide() {
+            const receipt = document.getElementById('receipt');
+            const guide = document.getElementById('pageBreakGuide');
+
+            if (!receipt || !guide) return;
+
+            const receiptWidth = receipt.clientWidth;
+            const receiptHeight = receipt.scrollHeight;
+            const firstPageHeight = (receiptWidth * 297) / 210 - 10;
+
+            if (receiptHeight > firstPageHeight + 24) {
+                guide.style.top = `${Math.max(firstPageHeight, 0)}px`;
+                guide.style.display = 'block';
+            } else {
+                guide.style.display = 'none';
+            }
+        }
+
         function addRow() {
             const tbody = document.getElementById('tableBody');
             const newRow = document.createElement('tr');
@@ -2125,6 +2168,7 @@
             `;
             tbody.appendChild(newRow);
             updateRowNumbers();
+            updatePageBreakGuide();
         }
 
         function removeRow() {
@@ -2134,6 +2178,7 @@
             if (rows.length > 1) {
                 rows[rows.length - 1].remove();
                 updateRowNumbers();
+                updatePageBreakGuide();
             } else {
                 alert('No se puede eliminar, debe haber al menos una fila.');
             }
@@ -2157,6 +2202,7 @@
                     document.getElementById('signatureSizeControl').style.display = 'block';
                     document.getElementById('signatureSizeSlider').value = 120;
                     document.getElementById('signatureSizeValue').textContent = '120px';
+                    updatePageBreakGuide();
                 };
                 reader.readAsDataURL(file);
             }
@@ -2168,6 +2214,7 @@
                 signatureImg.style.width = size + 'px';
                 signatureImg.style.height = 'auto';
                 document.getElementById('signatureSizeValue').textContent = size + 'px';
+                updatePageBreakGuide();
             }
         }
 
@@ -2289,6 +2336,7 @@
             if (lastClientRow) {
                 lastClientRow.textContent = 'MXN - Peso Mexicano';
             }
+            updatePageBreakGuide();
         }
 
         document.getElementById('tableBody').addEventListener('input', function(e) {
@@ -2314,6 +2362,7 @@
             document.getElementById('SubTotal').textContent = SubTotal.toLocaleString('en-US', { minimumFractionDigits: 2 });
             document.getElementById('tax').textContent = tax.toLocaleString('en-US', { minimumFractionDigits: 2 });
             document.getElementById('Total').textContent = Total.toLocaleString('en-US', { minimumFractionDigits: 2 });
+            updatePageBreakGuide();
         });
 
         // Formatear P. Unit. cuando se termina de editar
@@ -2363,6 +2412,7 @@
             const newFolio = generarFolioSSTM();
             document.getElementById('receiptNumber').textContent = newFolio;
             updateDragUI();
+            updatePageBreakGuide();
         });
         
         // Establecer fecha de Emisión automática
@@ -2373,7 +2423,16 @@
             if (emissionDateElement) {
                 emissionDateElement.textContent = today.toLocaleDateString('es-ES', dateOptions);
             }
+            updatePageBreakGuide();
         });
+
+        document.addEventListener('input', function(e) {
+            if (e.target.matches('[contenteditable="true"]')) {
+                updatePageBreakGuide();
+            }
+        });
+
+        window.addEventListener('resize', updatePageBreakGuide);
 
         // PDF Generation
         async function generatePDF() {
@@ -2386,8 +2445,13 @@
 
             const controls = document.querySelector('.controls');
             const logoOverlay = document.querySelector('.logo-overlay');
+            const pageBreakGuide = document.getElementById('pageBreakGuide');
             const savedOverlayStyle = logoOverlay.style.display;
+            const savedGuideDisplay = pageBreakGuide ? pageBreakGuide.style.display : '';
             logoOverlay.style.display = 'none';
+            if (pageBreakGuide) {
+                pageBreakGuide.style.display = 'none';
+            }
 
             try {
                 const receipt = document.getElementById('receipt');
@@ -2483,6 +2547,10 @@
                 alert('Error al generar el PDF. Por favor intente de nuevo.');
             } finally {
                 logoOverlay.style.display = savedOverlayStyle;
+                if (pageBreakGuide) {
+                    pageBreakGuide.style.display = savedGuideDisplay;
+                    updatePageBreakGuide();
+                }
                 overlay.classList.remove('active');
             }
         }
