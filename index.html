@@ -2401,7 +2401,13 @@
                     useCORS: true,
                     allowTaint: true,
                     backgroundColor: '#ffffff',
-                    logging: false
+                    logging: false,
+                    // Force desktop media-query layout during capture so mobile
+                    // viewports don't export a taller, fragmented PDF.
+                    windowWidth: 1280,
+                    windowHeight: Math.max(receipt.scrollHeight, receipt.offsetHeight),
+                    scrollX: 0,
+                    scrollY: 0
                 });
 
                 receipt.style.width = originalWidth;
